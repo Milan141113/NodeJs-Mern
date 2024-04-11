@@ -1,14 +1,14 @@
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import express, { json } from 'express';
 
 import mongoose from 'mongoose';
 import { registerValidation } from './validations/auth.js';
-import { validationResult } from 'express-validator';
-import UserModel from './modules/User.js';
+import checkAuth from './utils/checkAuth.js';
+import * as userControlers from './controlers/userControlers.js';
 
 mongoose
-  .connect(`mongodb+srv://milan:61-606mir@cluster0.w9rhs99.mongodb.net/blog`)
+  .connect(
+    `mongodb+srv://milan:61-606mir@cluster0.w9rhs99.mongodb.net/blog?retryWrites=true&w=majority&appName=Cluster0`
+  )
   .then(() => {
     console.log('Подключение к Mongo успешно');
   })
@@ -17,27 +17,11 @@ const app = express();
 
 app.use(express.json());
 
-app.post('/auth/register', registerValidation, async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json(errors.array());
-  }
+app.post('/auth/login', userControlers.login);
 
-  const password = req.body.password;
-  const salt = await bcrypt.genSalt(10);
-  const passwordHash = await bcrypt.hash(password, salt);
+app.get('/auth/me', checkAuth, userControlers.getMe);
 
-  const doc = new UserModel({
-    email: req.body.email,
-    fullName: req.body.fullName,
-    avatarUrl: req.body.avatarUrl,
-    passwordHash,
-  });
-
-  const user = await doc.save();
-
-  res.json(user);
-});
+app.post('/auth/register', registerValidation, userControlers.register);
 
 app.listen(4444, (err) => {
   if (err) {
